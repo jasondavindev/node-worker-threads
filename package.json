@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "ts-node ./src/index.ts"
+    "ex1": "ts-node ./examples/example1/index.ts",
+    "ex2": "ts-node ./examples/example2/index.ts"
   },
   "keywords": [],
   "author": "",
