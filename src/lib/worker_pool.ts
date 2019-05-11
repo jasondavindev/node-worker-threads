@@ -54,27 +54,27 @@ export class WorkerPool<S, R> {
 	}
 
 	private runTask(workerId: number, task: Task<S, R>) {
-		console.log('running task on worker', workerId);
+		//console.log('running task on worker', workerId + 1);
 
 		const worker = this.workers[workerId];
 
 		const messageCallback = (result: R) => {
-			cleanUp();
 			task.callback(null, result);
-			this.checkTaskQueue();
+			cleanUp();
 		};
 
 		const errorCallback = (error: any) => {
-			cleanUp();
 			task.callback(error, null);
-			this.checkTaskQueue();
+			cleanUp();
 		};
 
 		const cleanUp = () => {
 			this.activeWorkers[workerId] = false;
+			this.workers[workerId].removeAllListeners('message');
+			this.workers[workerId].removeAllListeners('error');
 
 			if (this.taskQueue.length > 0) {
-				this.runTask(this.getInactiveWorker(), this.taskQueue.shift());
+				this.runTask(workerId, this.taskQueue.shift());
 			}
 		};
 

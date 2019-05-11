@@ -1,18 +1,16 @@
+process.env.UV_THREADPOOL_SIZE = '8';
+
 import { WorkerPool } from './lib/worker_pool';
 import * as path from 'path';
 
-const pool = new WorkerPool<number, number>(path.join(__dirname, './worker.js'), 8);
+const pool = new WorkerPool<number, number>(path.join(__dirname, './worker.js'), 5);
+const random = (min: number, max: number): number => Math.floor(Math.random() * (max - min) + min);
+
 Promise.all(
-    Array(20).fill(null)
-        .map(el => Math.floor(Math.random() * 10) + 1)
-        .map(async (el) => {
-            const rs = await pool.run(el);
-            console.log(rs);
-        })
+	Array(400).fill(null).map(el => 100).map(async el => {
+		console.log(await pool.run(el));
+	}),
 ).then(() => {
-    console.log('finished');
-})
-pool.run(5).then(fibo => {
-	console.log(fibo);
+	console.log('finished');
+	pool.checkTaskQueue();
 });
-// pool.checkTaskQueue();
