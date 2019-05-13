@@ -58,7 +58,7 @@ export class WorkerPool<S, R> {
         });
     }
 
-    private getInactiveWorker(): number {
+    private getAvaliableWorker(): number {
         for (let i = 0; i < this.numThreads; i++) {
             if (this.workers[i].status === WorkerStatus.READY) {
                 return i;
@@ -70,7 +70,7 @@ export class WorkerPool<S, R> {
 
     public run(data: S) {
         return new Promise<R>((resolve, reject) => {
-            const avaliableWorker = this.getInactiveWorker();
+            const avaliableWorker = this.getAvaliableWorker();
 
             const task: Task<S, R> = {
                 data,
@@ -97,21 +97,12 @@ export class WorkerPool<S, R> {
 
         const messageCallback = (result: R) => {
             task.callback(null, result);
-            cleanUp();
+            this.cleanUp(workerId);
         };
 
         const errorCallback = (error: any) => {
             task.callback(error, null);
-            cleanUp();
-        };
-
-        const cleanUp = () => {
-            this.workers[workerId].status = WorkerStatus.READY;
-            this.workers[workerId].worker.removeAllListeners();
-
-            if (this.taskQueue.length > 0) {
-                this.runTask(workerId, this.taskQueue.shift());
-            }
+            this.cleanUp(workerId);
         };
 
         worker.worker.once('message', messageCallback);
@@ -119,6 +110,24 @@ export class WorkerPool<S, R> {
 
         worker.worker.postMessage(task.data);
         worker.status = WorkerStatus.BUSY;
+    }
+
+    private cleanUp(workerId: number) {
+        const worker = this.workers[workerId];
+        worker.status = WorkerStatus.READY;
+        worker.worker.removeAllListeners();
+        this.tick();
+    }
+
+    private tick() {
+        if (this.taskQueue.length === 0) return;
+
+        const avaliableWorker = this.getAvaliableWorker();
+
+        if (avaliableWorker === -1) return;
+
+        const task = this.taskQueue.shift();
+        this.runTask(avaliableWorker, task);
     }
 
     public checkTaskQueue() {

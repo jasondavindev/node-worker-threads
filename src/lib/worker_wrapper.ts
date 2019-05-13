@@ -8,8 +8,6 @@ export enum WorkerStatus {
 }
 
 export class WorkerWrapper {
-    public worker: Worker;
-    public status: WorkerStatus;
-
-    public initialize() {}
+    worker: Worker;
+    status: WorkerStatus;
 }
