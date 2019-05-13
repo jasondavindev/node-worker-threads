@@ -1,6 +1,6 @@
-import { WorkerWrapper, WorkerStatus } from "./worker_wrapper";
-import { Task } from "./task";
-import { Worker } from "worker_threads";
+import { WorkerWrapper, WorkerStatus } from './worker_wrapper';
+import { Task } from './task';
+import { Worker } from 'worker_threads';
 
 export class WorkerPool<S, R> {
     private workers: { [key: number]: WorkerWrapper } = {};
@@ -20,7 +20,7 @@ export class WorkerPool<S, R> {
                     worker.status = WorkerStatus.SPAWNING;
 
                     worker.worker.once(
-                        "online",
+                        'online',
                         (index => () => {
                             process.nextTick(() => {
                                 this.workers[index].status = WorkerStatus.READY;
@@ -38,7 +38,7 @@ export class WorkerPool<S, R> {
                     );
 
                     worker.worker.once(
-                        "error",
+                        'error',
                         (index => (error: Error) => {
                             process.nextTick(() => {
                                 this.workers[index].status = WorkerStatus.OFF;
@@ -114,8 +114,8 @@ export class WorkerPool<S, R> {
             }
         };
 
-        worker.worker.once("message", messageCallback);
-        worker.worker.once("error", errorCallback);
+        worker.worker.once('message', messageCallback);
+        worker.worker.once('error', errorCallback);
 
         worker.worker.postMessage(task.data);
         worker.status = WorkerStatus.BUSY;

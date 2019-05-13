@@ -1,18 +1,18 @@
 {
-  "name": "ts-worker",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "ex1": "ts-node ./examples/example1/index.ts",
-    "ex2": "ts-node ./examples/example2/index.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@types/node": "^12.0.0",
-    "ts-node": "^8.1.0",
-    "typescript": "^3.4.5"
-  }
+    "name": "ts-worker",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "ex1": "ts-node ./examples/example1/index.ts",
+        "ex2": "ts-node ./examples/example2/index.ts"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@types/node": "^12.0.0",
+        "ts-node": "^8.1.0",
+        "typescript": "^3.4.5"
+    }
 }

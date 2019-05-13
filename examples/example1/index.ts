@@ -1,11 +1,11 @@
-process.env.UV_THREADPOOL_SIZE = "8";
-import { WorkerPool } from "../../src/lib/worker_pool";
-import * as path from "path";
+process.env.UV_THREADPOOL_SIZE = '8';
+import { WorkerPool } from '../../src/lib/worker_pool';
+import * as path from 'path';
 
 const NUM_THREADS = +process.argv[2];
 
 const pool = new WorkerPool<number, number>(
-    path.join(__dirname, "./worker.js"),
+    path.join(__dirname, './worker.js'),
     NUM_THREADS
 );
 pool.setup().then(() => {
@@ -16,7 +16,7 @@ pool.setup().then(() => {
                 console.log(await pool.run(val));
             })
     ).then(() => {
-        console.log("finished");
+        console.log('finished');
         pool.checkTaskQueue();
     });
 });
