@@ -1,97 +1,134 @@
-import { Worker } from 'worker_threads';
-import { Task } from './task';
+import { WorkerWrapper, WorkerStatus } from "./worker_wrapper";
+import { Task } from "./task";
+import { Worker } from "worker_threads";
 
 export class WorkerPool<S, R> {
-	private workers: { [key: number]: Worker } = {};
-	private activeWorkers: { [key: number]: boolean } = {};
-	private taskQueue: Task<S, R>[] = [];
+    private workers: { [key: number]: WorkerWrapper } = {};
+    private taskQueue: Task<S, R>[] = [];
 
-	constructor(private pathWorker: string, private numThreads: number) {
-		this.init();
-	}
+    constructor(private pathWorker: string, private numThreads: number) {}
 
-	private init() {
-		if (this.numThreads > 0) {
-			for (let i = 0; i < this.numThreads; i++) {
-				this.workers[i] = new Worker(this.pathWorker);
-				this.activeWorkers[i] = false;
-			}
-		}
-	}
+    public async setup(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (this.numThreads > 0) {
+                let countSuccess = 0,
+                    countFailure = 0;
 
-	private getInactiveWorker(): number {
-		for (let i = 0; i < this.numThreads; i++) {
-			if (!this.activeWorkers[i]) {
-				return i;
-			}
-		}
+                for (let i = 0; i < this.numThreads; i++) {
+                    const worker = (this.workers[i] = new WorkerWrapper());
+                    worker.worker = new Worker(this.pathWorker);
+                    worker.status = WorkerStatus.SPAWNING;
 
-		return -1;
-	}
+                    worker.worker.once(
+                        "online",
+                        (index => () => {
+                            process.nextTick(() => {
+                                this.workers[index].status = WorkerStatus.READY;
+                                this.workers[index].worker.removeAllListeners();
+                                countSuccess++;
 
-	public run(data: S) {
-		return new Promise<R>((resolve, reject) => {
-			const avaliableWorker = this.getInactiveWorker();
+                                if (
+                                    countSuccess > 0 &&
+                                    countSuccess === this.numThreads
+                                ) {
+                                    resolve();
+                                }
+                            });
+                        })(i)
+                    );
 
-			const task: Task<S, R> = {
-				data,
-				callback: (error, result) => {
-					if (error) {
-						return reject(error);
-					}
+                    worker.worker.once(
+                        "error",
+                        (index => (error: Error) => {
+                            process.nextTick(() => {
+                                this.workers[index].status = WorkerStatus.OFF;
+                                this.workers[index].worker.removeAllListeners();
+                                countFailure++;
 
-					return resolve(result);
-				},
-			};
+                                if (countFailure === this.numThreads) {
+                                    reject(error);
+                                }
+                            });
+                        })(i)
+                    );
+                }
+            } else {
+                reject('Number threads its necessary');
+            }
+        });
+    }
 
-			if (avaliableWorker === -1) {
-				this.taskQueue.push(task);
-				return null;
-			}
+    private getInactiveWorker(): number {
+        for (let i = 0; i < this.numThreads; i++) {
+            if (this.workers[i].status === WorkerStatus.READY) {
+                return i;
+            }
+        }
 
-			this.runTask(avaliableWorker, task);
-		});
-	}
+        return -1;
+    }
 
-	private runTask(workerId: number, task: Task<S, R>) {
-		//console.log('running task on worker', workerId + 1);
+    public run(data: S) {
+        return new Promise<R>((resolve, reject) => {
+            const avaliableWorker = this.getInactiveWorker();
 
-		const worker = this.workers[workerId];
+            const task: Task<S, R> = {
+                data,
+                callback: (error, result) => {
+                    if (error) {
+                        return reject(error);
+                    }
 
-		const messageCallback = (result: R) => {
-			task.callback(null, result);
-			cleanUp();
-		};
+                    return resolve(result);
+                }
+            };
 
-		const errorCallback = (error: any) => {
-			task.callback(error, null);
-			cleanUp();
-		};
+            if (avaliableWorker === -1) {
+                this.taskQueue.push(task);
+                return null;
+            }
 
-		const cleanUp = () => {
-			this.activeWorkers[workerId] = false;
-			this.workers[workerId].removeAllListeners('message');
-			this.workers[workerId].removeAllListeners('error');
+            this.runTask(avaliableWorker, task);
+        });
+    }
 
-			if (this.taskQueue.length > 0) {
-				this.runTask(workerId, this.taskQueue.shift());
-			}
-		};
+    private runTask(workerId: number, task: Task<S, R>) {
+        const worker = this.workers[workerId];
 
-		worker.once('message', messageCallback);
-		worker.once('error', errorCallback);
+        const messageCallback = (result: R) => {
+            task.callback(null, result);
+            cleanUp();
+        };
 
-		worker.postMessage(task.data);
-		this.activeWorkers[workerId] = true;
-	}
-	
-	public checkTaskQueue() {
-		if (this.taskQueue.length === 0) {
-			for (let i = 0; i < this.numThreads; i++) {
-				if (!this.activeWorkers[i]) {
-					this.workers[i].terminate();
-				}
-			}
-		}
-	}
+        const errorCallback = (error: any) => {
+            task.callback(error, null);
+            cleanUp();
+        };
+
+        const cleanUp = () => {
+            this.workers[workerId].status = WorkerStatus.READY;
+            this.workers[workerId].worker.removeAllListeners();
+
+            if (this.taskQueue.length > 0) {
+                this.runTask(workerId, this.taskQueue.shift());
+            }
+        };
+
+        worker.worker.once("message", messageCallback);
+        worker.worker.once("error", errorCallback);
+
+        worker.worker.postMessage(task.data);
+        worker.status = WorkerStatus.BUSY;
+    }
+
+    public checkTaskQueue() {
+        if (this.taskQueue.length === 0) {
+            for (let i = 0; i < this.numThreads; i++) {
+                if (this.workers[i].status === WorkerStatus.READY) {
+                    this.workers[i].worker.terminate();
+                    this.workers[i].status = WorkerStatus.OFF;
+                }
+            }
+        }
+    }
 }
