@@ -70,8 +70,6 @@ export class WorkerPool<S, R> {
 
     public run(data: S) {
         return new Promise<R>((resolve, reject) => {
-            const avaliableWorker = this.getAvaliableWorker();
-
             const task: Task<S, R> = {
                 data,
                 callback: (error, result) => {
@@ -83,13 +81,13 @@ export class WorkerPool<S, R> {
                 }
             };
 
-            if (avaliableWorker === -1) {
-                this.taskQueue.push(task);
-                return null;
-            }
-
-            this.runTask(avaliableWorker, task);
+            this.scheduleTask(task);
+            this.tick();
         });
+    }
+
+    scheduleTask(task: Task<S, R>) {
+        this.taskQueue.push(task);
     }
 
     private runTask(workerId: number, task: Task<S, R>) {
