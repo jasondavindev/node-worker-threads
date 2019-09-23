@@ -1,16 +1,12 @@
 const { parentPort, threadId } = require('worker_threads');
-const { pbkdf2 } = require('crypto');
 
-parentPort.on('message', data => {
-    pbkdf2('a', 'b', 1000 * data, 512, 'sha512', () => {
-        parentPort.postMessage(threadId);
-    });
+/**
+ * Simulates a complex task
+ */
+parentPort.on('message', (data) => {
+	const randomTime = (Math.floor(Math.random() * 3) + 1) * 1000;
+	setTimeout(
+		() => parentPort.postMessage(`${threadId} -> ${randomTime}`),
+		randomTime
+	);
 });
-
-function fibonnaci(n) {
-    if (n <= 1) {
-        return 1;
-    }
-
-    return n * fibonnaci(n - 1);
-}
