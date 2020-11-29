@@ -17,13 +17,13 @@ The **worker_threads** module enables the use of threads that execute JavaScript
 - `javascriptFile` **string**: path to Javascript script file
 - `numWorkers` **number**: amount of workers
 
-```
+```js
 const workerPool = new WorkerPool<number, string>('script.js', 4);
 ```
 
 The Javascript script example:
 
-```
+```js
 const { parentPort, threadId } = require('worker_threads');
 
 /**
@@ -46,7 +46,7 @@ parentPort.on('message', (data) => {
 
 Instantiates the workers. It's necessary before any task starts.
 
-```
+```js
 const workerPool = new WorkerPool<number, string>('script.js', 4);
 await workerPool.setup();
 ```
@@ -55,7 +55,7 @@ await workerPool.setup();
 
 - data **T**: input data for task. Generic `T` is defined on class constructor.
 
-```
+```js
 const workerPool = new WorkerPool<number, string>('script.js', 4);
 await workerPool.setup();
 const result = await workerPool.run(100);
